@@ -1,0 +1,46 @@
+---
+version: "3"
+
+services:
+
+  dex-backend:
+    build: ./dex
+    networks:
+      - default
+    ports:
+      - "5556:5556"
+    env_file:
+      - .github-secrets.env
+    volumes:
+      - ./dex-config.yaml:/etc/dex/config.yaml
+    command: ["/opt/dex/bin/dex", "serve", "/etc/dex/config.yaml"]
+
+  dex-proxy:
+    image: envoyproxy/envoy:latest
+    volumes:
+      - ./envoy/envoy.yaml:/etc/envoy/envoy.yaml
+    ports:
+      - "9000:9000"
+      - "9901:9901"
+
+  dex-app:
+    depends_on:
+      - dex-backend
+      - dex-proxy
+    build: ./dex-app
+    networks:
+      - default
+    ports:
+      - "5555:5555"
+    command:
+      - /bin/dex-app
+      - --client-id
+      - dex-app
+      - --client-secret
+      - ZXhhbXBsZS1hcHAtc2VjcmV0
+      - --redirect-uri
+      - http://dex-app:5555/callback
+      - --issuer
+      - http://dex-proxy:9000/dex
+      - --listen
+      - http://0.0.0.0:5555

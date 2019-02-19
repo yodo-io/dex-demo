@@ -1,0 +1,60 @@
+---
+admin:
+  access_log_path: /tmp/admin_access.log
+  address:
+    socket_address:
+      address: 0.0.0.0
+      port_value: 9901
+
+static_resources:
+
+  listeners:
+  - name: frontend
+    address:
+      socket_address:
+        address: 0.0.0.0
+        port_value: 9000
+    filter_chains:
+    - filters:
+        - name: envoy.http_connection_manager
+          config:
+            access_log:
+              name: envoy.file_access_log
+              config:
+                path: /dev/stdout
+                json_format:
+                  start_time: "%START_TIME%"
+                  protocol: "%PROTOCOL%"
+                  duration: "%DURATION%"
+                  service_time: "%RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)%"
+                  user_agent: "%REQ(USER-AGENT)%"
+                  path: "%REQ(X-ENVOY-ORIGINAL-PATH?:PATH)%"
+                  method: "%REQ(:METHOD)%"
+                  response_code: "%RESPONSE_CODE%"
+                  forwarded_for: "%REQ(X-FORWARDED-FOR)%"
+                  authority: "%REQ(:AUTHORITY)%"
+                  upstream_host: "%UPSTREAM_HOST%"
+            stat_prefix: ingress_http
+            route_config:
+              name: local_route
+              virtual_hosts:
+              - name: local_service
+                domains: ["*"]
+                routes:
+                - match:
+                    prefix: "/"
+                  route:
+                    cluster: dex
+            http_filters:
+            - name: envoy.router
+
+  clusters:
+  - name: dex
+    connect_timeout: 0.25s
+    type: LOGICAL_DNS
+    dns_lookup_family: V4_ONLY
+    lb_policy: ROUND_ROBIN
+    hosts:
+      - socket_address:
+          address: dex-backend
+          port_value: 5556
