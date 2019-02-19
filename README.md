@@ -3,7 +3,6 @@
 ## TODO
 
 - Nicer frontend for dex app
-- Figure out internal URLs, redirects (can use localhost, avoid editing /etc/hosts?)
 - Use ID token to get AWS STS credentials and generate IAM credentials
 
 ## Query Provider
